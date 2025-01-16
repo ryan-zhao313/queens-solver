@@ -30,24 +30,11 @@ cropped_grid = img[y:y+h, x:x+w]
 gray_cropped = cv2.cvtColor(cropped_grid, cv2.COLOR_BGR2GRAY)
 edges_cropped = cv2.Canny(gray_cropped, 50, 150)
 
-# # Original resized image
-# plt.subplot(1, 2, 1)
-# plt.title("Resized Image")
-# plt.imshow(cv2.cvtColor(cropped_grid, cv2.COLOR_BGR2RGB))
-# plt.axis("off")
-
-# # Edges detected
-# plt.subplot(1, 2, 2)
-# plt.title("Edges Detected")
-# plt.imshow(edges_cropped, cmap="gray")
-# plt.axis("off")
-# plt.show()
-
 def cluster_lines(lines, threshold=10):
     if not lines:
         return []
 
-    lines.sort(key=lambda line: (line[1] + line[3]) / 2)  # Average y-coordinate
+    lines.sort(key=lambda line: (line[1] + line[3]) / 2)
     clustered_lines = []
     cluster = [lines[0]]
 
@@ -83,15 +70,8 @@ lines = cv2.HoughLinesP(
             maxLineGap=20
             )
 
-# lines = cv2.HoughLines(edges_cropped, 1, np.pi / 180, threshold=150)
-
 # Create a copy of the resized image to draw the lines on
 line_image = cropped_grid.copy()
-
-# # Draw the lines
-# for points in lines:
-#     x1,y1,x2,y2=points[0]
-#     cv2.line(line_image,(x1,y1),(x2,y2),(0,255,0),2)
 
 horizontal_lines = []
 if lines is not None:
@@ -106,18 +86,17 @@ clustered_horizontal = cluster_lines(horizontal_lines, threshold=15)
 
 # Compute grid size
 grid_size = len(clustered_horizontal) - 1
-print(f"Grid size: {grid_size} rows x {grid_size} columns")
 
-# # Draw clustered lines on the image
-# for (x1, y1, x2, y2) in clustered_horizontal:
-#     cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 2)
+# Draw clustered lines on the image
+for (x1, y1, x2, y2) in clustered_horizontal:
+    cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
-# # Display the result
-# plt.figure(figsize=(10, 10))
-# plt.imshow(cv2.cvtColor(line_image, cv2.COLOR_BGR2RGB))
-# plt.axis("off")
-# plt.title("Clustered Lines")
-# plt.show()
+# Display the result
+plt.figure(figsize=(10, 10))
+plt.imshow(cv2.cvtColor(line_image, cv2.COLOR_BGR2RGB))
+plt.axis("off")
+plt.title("Clustered Lines")
+plt.show()
 
 # Define the colors list
 colors = [
@@ -166,4 +145,3 @@ for row in range(grid_size):
         pixel_rgb = (pixel_bgr[2], pixel_bgr[1], pixel_bgr[0])
         color_name = get_closest_color(pixel_rgb)
         grid[row, col] = color_name
-
