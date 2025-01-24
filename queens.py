@@ -10,7 +10,7 @@ if img is None:
     raise ValueError("Image not found or unable to load.")
 
 # Resize and preprocess the image
-img = cv2.resize(img, (0,0), fx=0.75, fy=0.75)
+img = cv2.resize(img, (0,0), fx=0.65, fy=0.65)
 gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 blurred_img = cv2.GaussianBlur(gray_img, (5, 5), 0)
 edges = cv2.Canny(blurred_img, 50, 150)
@@ -54,7 +54,6 @@ def cluster_lines(lines, threshold=10):
         prev_line = cluster[-1]
         curr_line = lines[i]
         distance = abs((curr_line[1] + curr_line[3]) / 2 - (prev_line[1] + prev_line[3]) / 2)
-
         if distance < threshold:
             cluster.append(curr_line)
         else:
@@ -94,7 +93,6 @@ line_image = cropped_grid.copy()
 #     cv2.line(line_image,(x1,y1),(x2,y2),(0,255,0),2)
 
 horizontal_lines = []
-
 if lines is not None:
     for line in lines[:, 0]:
         x1, y1, x2, y2 = line
