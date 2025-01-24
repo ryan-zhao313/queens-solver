@@ -1,4 +1,5 @@
 import cv2
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
@@ -104,16 +105,65 @@ if lines is not None:
 clustered_horizontal = cluster_lines(horizontal_lines, threshold=15)
 
 # Compute grid size
-num_rows = len(clustered_horizontal) - 1
-print(f"Grid size: {num_rows} rows x {num_rows} columns")
+grid_size = len(clustered_horizontal) - 1
+print(f"Grid size: {grid_size} rows x {grid_size} columns")
 
-# Draw clustered lines on the image
-for (x1, y1, x2, y2) in clustered_horizontal:
-    cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 2)
+# # Draw clustered lines on the image
+# for (x1, y1, x2, y2) in clustered_horizontal:
+#     cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
-# Display the result
-plt.figure(figsize=(10, 10))
-plt.imshow(cv2.cvtColor(line_image, cv2.COLOR_BGR2RGB))
-plt.axis("off")
-plt.title("Clustered Lines")
-plt.show()
+# # Display the result
+# plt.figure(figsize=(10, 10))
+# plt.imshow(cv2.cvtColor(line_image, cv2.COLOR_BGR2RGB))
+# plt.axis("off")
+# plt.title("Clustered Lines")
+# plt.show()
+
+# Define the colors list
+colors = [
+    {"name": "purple", "hex": 0xbba3e2, "rgb": (187, 163, 226)},
+    {"name": "orange", "hex": 0xffc992, "rgb": (255, 201, 146)},
+    {"name": "blue", "hex": 0x96beff, "rgb": (150, 190, 255)},
+    {"name": "light-green", "hex": 0xb3dfa0, "rgb": (179, 223, 160)},
+    {"name": "light-grey", "hex": 0xdfdfdf, "rgb": (223, 223, 223)},
+    {"name": "red", "hex": 0xff7b60, "rgb": (255, 123, 96)},
+    {"name": "yellow", "hex": 0xe6f388, "rgb": (230, 243, 136)},
+    {"name": "dark-grey", "hex": 0xb9b29e, "rgb": (185, 178, 158)},
+    {"name": "light-pink", "hex": 0xdfa0bf, "rgb": (223, 160, 191)},
+    {"name": "light-blue", "hex": 0xa3d2d8, "rgb": (163, 210, 216)},
+    {"name": "black", "hex": 0x000000, "rgb": (0, 0, 0)}
+]
+
+# Function to convert a hex color to RGB
+def hex_to_rgb(hex_value):
+    return ((hex_value >> 16) & 0xFF, (hex_value >> 8) & 0xFF, hex_value & 0xFF)
+
+# Function to calculate the closest color
+def get_closest_color(rgb):
+    r, g, b = map(int, rgb)
+    min_distance = math.inf
+    closest_color_name = 'black'
+
+    for color in colors:
+        cr, cg, cb = color["rgb"]
+        distance = math.sqrt((r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2)
+        if distance < min_distance:
+            min_distance = distance
+            closest_color_name = color["name"]
+    return closest_color_name
+
+# Map colors from the cropped image into a 2D grid
+grid = np.full((grid_size, grid_size), 'black', dtype='<U15')
+
+step_x = cropped_grid.shape[1] / grid_size
+step_y = cropped_grid.shape[0] / grid_size
+
+for row in range(grid_size):
+    for col in range(grid_size):
+        center_x = int((col + 0.5) * step_x)
+        center_y = int((row + 0.5) * step_y)
+        pixel_bgr = cropped_grid[center_y, center_x]
+        pixel_rgb = (pixel_bgr[2], pixel_bgr[1], pixel_bgr[0])
+        color_name = get_closest_color(pixel_rgb)
+        grid[row, col] = color_name
+
