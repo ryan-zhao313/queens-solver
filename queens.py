@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 
-img = cv2.imread("test/255-1.PNG")
+img = cv2.imread("test/254.PNG")
 
 # handle error is no file found
 if img is None:
@@ -42,17 +42,48 @@ edges_cropped = cv2.Canny(gray_cropped, 50, 150)
 # plt.axis("off")
 # plt.show()
 
-# Perform Hough Line Transform to detect lines in the image
-# lines = cv2.HoughLinesP(
-#             edges_cropped,
-#             1,
-#             np.pi / 180,
-#             threshold=150,
-#             minLineLength=50,
-#             maxLineGap=20
-#             )
+def cluster_lines(lines, threshold=10):
+    if not lines:
+        return []
 
-lines = cv2.HoughLines(edges_cropped, 1, np.pi / 180, threshold=200)
+    lines.sort(key=lambda line: (line[1] + line[3]) / 2)  # Average y-coordinate
+    clustered_lines = []
+    cluster = [lines[0]]
+
+    for i in range(1, len(lines)):
+        prev_line = cluster[-1]
+        curr_line = lines[i]
+        distance = abs((curr_line[1] + curr_line[3]) / 2 - (prev_line[1] + prev_line[3]) / 2)
+
+        if distance < threshold:
+            cluster.append(curr_line)
+        else:
+            # Merge the cluster into one representative line
+            clustered_lines.append(merge_lines(cluster))
+            cluster = [curr_line]
+
+    # Add the last cluster
+    clustered_lines.append(merge_lines(cluster))
+    return clustered_lines
+
+def merge_lines(cluster):
+    x1 = min(line[0] for line in cluster)
+    x2 = max(line[2] for line in cluster)
+    y1 = int(np.mean([line[1] for line in cluster]))
+    y2 = int(np.mean([line[3] for line in cluster]))
+    return (x1, y1, x2, y2)
+
+# Perform Hough Line Transform to detect lines in the image
+lines = cv2.HoughLinesP(
+            edges_cropped,
+            1,
+            np.pi / 180,
+            threshold=180,
+            minLineLength=150,
+            maxLineGap=20
+            )
+
+# lines = cv2.HoughLines(edges_cropped, 1, np.pi / 180, threshold=150)
 
 # Create a copy of the resized image to draw the lines on
 line_image = cropped_grid.copy()
@@ -63,91 +94,28 @@ line_image = cropped_grid.copy()
 #     cv2.line(line_image,(x1,y1),(x2,y2),(0,255,0),2)
 
 horizontal_lines = []
-vertical_lines = []
 
-# if lines is not None:
-#     for line in lines[:, 0]:
-#         x1, y1, x2, y2 = line
-#         theta = np.arctan2(y2 - y1, x2 - x1)
-#         if np.isclose(theta, 0, atol=np.pi/180):
-#             horizontal_lines.append(line)
-#         elif np.isclose(theta, np.pi / 2, atol=np.pi/180):
-#             vertical_lines.append(line)
-
-# # Apply clustering to horizontal and vertical lines separately
-# def cluster_lines(lines):
-#     lines_array = np.array(lines)
-#     kmeans = KMeans(n_clusters=len(lines) // 2, random_state=42).fit(lines_array)
-#     clustered_lines = kmeans.cluster_centers_
-#     return clustered_lines
-
-# clustered_horizontal = cluster_lines(horizontal_lines)
-# clustered_vertical = cluster_lines(vertical_lines)
-
-# if lines is not None:
-#     for (x1, y1, x2, y2) in clustered_horizontal:
-#         cv2.line(line_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-#     for (x1, y1, x2, y2) in clustered_vertical:
-#         cv2.line(line_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-
-# # Display the image with the detected lines
-# plt.figure(figsize=(10, 10))
-# plt.title("Detected Grid Lines")
-# plt.imshow(cv2.cvtColor(line_image, cv2.COLOR_BGR2RGB))
-# plt.axis("off")
-# plt.show()
-
-# Convert the detected lines into a more usable form
 if lines is not None:
-    for rho, theta in lines[:, 0]:
+    for line in lines[:, 0]:
+        x1, y1, x2, y2 = line
+        theta = np.arctan2(y2 - y1, x2 - x1)
         if np.isclose(theta, 0, atol=np.pi/180):
-            horizontal_lines.append((rho, theta))
-        elif np.isclose(theta, np.pi / 2, atol=np.pi/180):
-            vertical_lines.append((rho, theta))
+            horizontal_lines.append(line)
 
-# Sort lines
-horizontal_lines = sorted(horizontal_lines, key=lambda x: x[0])
-vertical_lines = sorted(vertical_lines, key=lambda x: x[0])
-
-# Find intersections
-intersections = []
-for h_rho, h_theta in horizontal_lines:
-    for v_rho, v_theta in vertical_lines:
-        # Calculate x, y using the line equations
-        A = np.array([
-            [np.cos(h_theta), np.sin(h_theta)],
-            [np.cos(v_theta), np.sin(v_theta)]
-        ])
-        b = np.array([h_rho, v_rho])
-        if np.linalg.det(A) != 0:  # Ensure the determinant is not zero
-            x, y = np.linalg.solve(A, b)
-            intersections.append((int(round(x)), int(round(y))))
-
-# Convert intersections to a NumPy array for clustering
-intersections = np.array(intersections)
-
-# # Apply clustering to group intersections
-# kmeans_intersections = KMeans(n_clusters=100, random_state=42).fit(intersections)
-# grouped_intersections = kmeans_intersections.cluster_centers_
-
-# # Round and convert to integer points
-# rounded_intersections = [tuple(map(int, point)) for point in grouped_intersections]
-
-# Draw grid and intersections
-grid_image = cropped_grid.copy()
-for (x, y) in intersections:
-    if 0 <= x < grid_image.shape[1] and 0 <= y < grid_image.shape[0]:  # Ensure points are within bounds
-        cv2.circle(grid_image, (x, y), 5, (0, 255, 0), -1)
-
-# print(len(rounded_intersections))
-
-plt.figure(figsize=(10, 10))
-plt.title("Detected Grid Intersections")
-plt.imshow(cv2.cvtColor(grid_image, cv2.COLOR_BGR2RGB))
-plt.axis("off")
-plt.show()
+# Cluster lines
+clustered_horizontal = cluster_lines(horizontal_lines, threshold=15)
 
 # Compute grid size
-num_rows = len(horizontal_lines) - 1
-num_cols = len(vertical_lines) - 1
-print(f"Grid size: {num_rows} rows x {num_cols} columns")
+num_rows = len(clustered_horizontal) - 1
+print(f"Grid size: {num_rows} rows x {num_rows} columns")
+
+# Draw clustered lines on the image
+for (x1, y1, x2, y2) in clustered_horizontal:
+    cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+# Display the result
+plt.figure(figsize=(10, 10))
+plt.imshow(cv2.cvtColor(line_image, cv2.COLOR_BGR2RGB))
+plt.axis("off")
+plt.title("Clustered Lines")
+plt.show()
