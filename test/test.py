@@ -3,7 +3,7 @@ import math
 import numpy as np
 import cv2
 
-img = cv2.imread("test/puzzle 170.PNG")
+img = cv2.imread("test/254.PNG")
 
 # handle error is no file found
 if img is None:
@@ -60,7 +60,7 @@ def get_closest_color(rgb):
     return closest_color_name
 
 # Example grid size and pixel processing
-grid_size = 8
+grid_size = 9
 
 # Map colors from the cropped image into a 2D grid
 grid = np.full((grid_size, grid_size), 'black', dtype='<U15')
@@ -77,37 +77,83 @@ for row in range(grid_size):
         color_name = get_closest_color(pixel_rgb)
         grid[row, col] = color_name
 
-# # Display the resulting grid
-# print("Mapped grid:")
-# print(grid)
+print(grid)
 
-# import matplotlib.patches as patches
+import matplotlib.patches as patches
 
-# # Define a color map based on the colors dictionary
-# color_map = {color["name"]: np.array(color["rgb"]) / 255 for color in colors}
+# Define a color map based on the colors dictionary
+color_map = {color["name"]: np.array(color["rgb"]) / 255 for color in colors}
 
-# # Initialize the figure
-# fig, ax = plt.subplots(figsize=(8, 8))
+# Initialize the figure
+fig, ax = plt.subplots(figsize=(8, 8))
 
-# # Plot each cell in the grid
-# for y in range(grid_size):
-#     for x in range(grid_size):
-#         color_name = grid[y, x]
-#         color_rgb = color_map.get(color_name, [0, 0, 0])  # Default to black if color not found
-#         rect = patches.Rectangle((x, grid_size - y - 1), 1, 1, facecolor=color_rgb, edgecolor="black")
-#         ax.add_patch(rect)
+# Plot each cell in the grid
+for y in range(grid_size):
+    for x in range(grid_size):
+        color_name = grid[y, x]
+        color_rgb = color_map.get(color_name, [0, 0, 0])  # Default to black if color not found
+        rect = patches.Rectangle((x, grid_size - y - 1), 1, 1, facecolor=color_rgb, edgecolor="black")
+        ax.add_patch(rect)
 
-# # Set axis limits and gridlines
-# ax.set_xlim(0, grid_size)
-# ax.set_ylim(0, grid_size)
-# ax.set_xticks(range(grid_size))
-# ax.set_yticks(range(grid_size))
-# ax.set_xticklabels([])
-# ax.set_yticklabels([])
-# ax.set_aspect("equal")
-# ax.grid(True, which="both", color="black", linestyle="-", linewidth=0.5)
+# Set axis limits and gridlines
+ax.set_xlim(0, grid_size)
+ax.set_ylim(0, grid_size)
+ax.set_xticks(range(grid_size))
+ax.set_yticks(range(grid_size))
+ax.set_xticklabels([])
+ax.set_yticklabels([])
+ax.set_aspect("equal")
+ax.grid(True, which="both", color="black", linestyle="-", linewidth=0.5)
 
-# # Title and display
-# plt.title("Mapped Grid Visualization")
-# plt.show()
+# Title and display
+plt.title("Mapped Grid Visualization")
+plt.show()
 
+from collections import defaultdict
+
+def solve_n_queens(grid):
+    region_coords = defaultdict(list)
+    n = grid_size
+    for y, row in enumerate(grid):
+        for x, color in enumerate(row):
+            region_coords[color].append((x, y))
+
+    # Sort regions by size (smallest first)
+    sorted_regions = sorted(region_coords.values(), key=len)
+
+    def try_region(regions):
+        # Base case: all regions are processed
+        if not regions:
+            yield []
+            return
+
+        # Take the smallest region and remaining regions
+        smallest, *remaining = regions
+
+        # Try placing a queen in every cell of the smallest region
+        for x, y in smallest:
+            # Filter out invalid placements for remaining regions
+            filtered = [
+                [
+                    (x2, y2) for x2, y2 in region
+                    if x2 != x and y2 != y
+                    and abs(x2 - x) > 1 or abs(y2 - y) > 1
+                ]
+                for region in remaining
+            ]
+
+            if any(len(region) == 0 for region in filtered):
+                continue
+
+            for solution in try_region(filtered):
+                yield [(x, y)] + solution
+
+    # Generate all solutions
+    return list(try_region(sorted_regions))
+
+# Solve the N-Queens problem using this grid
+solutions = solve_n_queens(grid)
+print(f"Number of solutions: {len(solutions)}")
+
+# Print the first solution
+print(solutions[0])

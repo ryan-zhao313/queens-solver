@@ -2,7 +2,7 @@ import cv2
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.cluster import KMeans
+from collections import defaultdict
 
 img = cv2.imread("test/254.PNG")
 
@@ -70,9 +70,6 @@ lines = cv2.HoughLinesP(
             maxLineGap=20
             )
 
-# Create a copy of the resized image to draw the lines on
-line_image = cropped_grid.copy()
-
 horizontal_lines = []
 if lines is not None:
     for line in lines[:, 0]:
@@ -86,17 +83,6 @@ clustered_horizontal = cluster_lines(horizontal_lines, threshold=15)
 
 # Compute grid size
 grid_size = len(clustered_horizontal) - 1
-
-# Draw clustered lines on the image
-for (x1, y1, x2, y2) in clustered_horizontal:
-    cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 2)
-
-# Display the result
-plt.figure(figsize=(10, 10))
-plt.imshow(cv2.cvtColor(line_image, cv2.COLOR_BGR2RGB))
-plt.axis("off")
-plt.title("Clustered Lines")
-plt.show()
 
 # Define the colors list
 colors = [
@@ -145,3 +131,61 @@ for row in range(grid_size):
         pixel_rgb = (pixel_bgr[2], pixel_bgr[1], pixel_bgr[0])
         color_name = get_closest_color(pixel_rgb)
         grid[row, col] = color_name
+
+def solve_queens(grid):
+    # Partition the grid into regions by color
+    region_coords = defaultdict(list)
+    n = grid_size
+    for y, row in enumerate(grid):
+        for x, color in enumerate(row):
+            region_coords[color].append((x, y))  # Group coordinates by color
+
+    # Sort regions by size (smallest first)
+    sorted_regions = sorted(region_coords.values(), key=len)
+
+    def try_region(regions):
+        if not regions:
+            return []
+
+        # Take the smallest region and remaining regions
+        smallest, *remaining = regions
+
+        # Try placing a queen in every cell of the smallest region
+        for x, y in smallest:
+            # Filter out invalid placements for remaining regions
+            filtered = [
+                [
+                    (x2, y2) for x2, y2 in region
+                    if x2 != x and y2 != y
+                    and (abs(x2 - x) > 1 or abs(y2 - y) > 1)
+                ]
+                for region in remaining
+            ]
+
+            # If any region has no valid cells, skip this placement
+            if any(len(region) == 0 for region in filtered):
+                continue
+
+            # Recurse on the remaining regions
+            solution = try_region(filtered)
+            if solution is not None:
+                return [(x, y)] + solution
+        return None
+
+    # Generate all solutions
+    return try_region(sorted_regions)
+
+# Place the queens on a board
+def display_solution(grid_size, solution):
+    output_grid = [['-' for _ in range(grid_size)] for _ in range(grid_size)]
+    for x, y in solution:
+        output_grid[y][x] = '👑'
+    for row in output_grid:
+        print(' '.join(row))
+
+solution = solve_queens(grid)
+if solution:
+    print("Solution found:")
+    display_solution(grid_size, solution)
+else:
+    print("No solution exists.")
