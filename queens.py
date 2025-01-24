@@ -21,69 +21,62 @@ blurred_img = cv2.GaussianBlur(gray_img, (5, 5), 0)
 # Edge detection using Canny
 edges = cv2.Canny(blurred_img, 50, 150)
 
-# Find contours
+# Find contours and crop the grid
 contours, _ = cv2.findContours(edges.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+grid_contour = max(contours, key=cv2.contourArea, default=None)
+if grid_contour is None:
+    raise ValueError("No grid contour found.")
+x, y, w, h = cv2.boundingRect(grid_contour)
+cropped_grid = img[y:y+h, x:x+w]
 
-# Find the largest rectangular contour
-grid_contour = None
-max_area = 0
-for contour in contours:
-    # Approximate the contour to reduce the number of points
-    approx = cv2.approxPolyDP(contour, 0.02 * cv2.arcLength(contour, True), True)
-    if len(approx) == 4:  # Check if the contour is a quadrilateral
-        area = cv2.contourArea(approx)
-        if area > max_area:
-            max_area = area
-            grid_contour = approx
+# Detect lines in the cropped grid
+gray_cropped = cv2.cvtColor(cropped_grid, cv2.COLOR_BGR2GRAY)
+edges_cropped = cv2.Canny(gray_cropped, 50, 150)
+lines = cv2.HoughLines(edges_cropped, 1, np.pi / 180, 150)
 
-# If a grid contour is found, crop it
-if grid_contour is not None:
-    # Get bounding box for the contour
-    x, y, w, h = cv2.boundingRect(grid_contour)
-    cropped_grid = img[y:y+h, x:x+w]
-else:
-    cropped_grid = None
+# Separate horizontal and vertical lines
+horizontal_lines = []
+vertical_lines = []
+if lines is not None:
+    for rho, theta in lines[:, 0]:
+        if np.isclose(theta, 0):  # Horizontal
+            horizontal_lines.append(rho)
+        elif np.isclose(theta, np.pi / 2):  # Vertical
+            vertical_lines.append(rho)
 
-# Display the results
-plt.figure(figsize=(12, 6))
+horizontal_lines = sorted(horizontal_lines)
+vertical_lines = sorted(vertical_lines)
 
 # Original resized image
-plt.subplot(1, 3, 1)
+plt.subplot(1, 2, 1)
 plt.title("Resized Image")
-plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+plt.imshow(cv2.cvtColor(cropped_grid, cv2.COLOR_BGR2RGB))
 plt.axis("off")
 
 # Edges detected
-plt.subplot(1, 3, 2)
+plt.subplot(1, 2, 2)
 plt.title("Edges Detected")
-plt.imshow(edges, cmap="gray")
+plt.imshow(edges_cropped, cmap="gray")
 plt.axis("off")
 
-# Cropped grid
-if cropped_grid is not None:
-    plt.subplot(1, 3, 3)
-    plt.title("Cropped Grid")
-    plt.imshow(cv2.cvtColor(cropped_grid, cv2.COLOR_BGR2RGB))
-    plt.axis("off")
-else:
-    print("Grid contour not found.")
+# Find intersections
+intersections = []
+for h in horizontal_lines:
+    for v in vertical_lines:
+        x = int(v)
+        y = int(h)
+        intersections.append((x, y))
 
-plt.tight_layout()
+# Draw grid and intersections
+grid_image = cropped_grid.copy()
+for (x, y) in intersections:
+    cv2.circle(grid_image, (x, y), 5, (0, 255, 0), -1)
+
+plt.figure(figsize=(10, 10))
+plt.title("Detected Grid Intersections")
+plt.imshow(cv2.cvtColor(grid_image, cv2.COLOR_BGR2RGB))
+plt.axis("off")
 plt.show()
-
-# Display the original and processed images
-# plt.figure(figsize=(10, 5))
-# plt.subplot(1, 2, 1)
-# plt.title("Resized Image")
-# plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-# plt.axis("off")
-
-# plt.subplot(1, 2, 2)
-# plt.title("Edges Detected")
-# plt.imshow(edges, cmap="gray")
-# plt.axis("off")
-
-# plt.show()
 
 # Perform Hough Line Transform to detect lines in the image
 lines = cv2.HoughLines(edges, 1, np.pi / 180, threshold=200)
