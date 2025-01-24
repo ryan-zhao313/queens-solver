@@ -111,21 +111,20 @@ plt.show()
 
 from collections import defaultdict
 
-def solve_n_queens(grid):
+def solve_queens(grid):
+    # Partition the grid into regions by color
     region_coords = defaultdict(list)
     n = grid_size
     for y, row in enumerate(grid):
         for x, color in enumerate(row):
-            region_coords[color].append((x, y))
+            region_coords[color].append((x, y))  # Group coordinates by color
 
     # Sort regions by size (smallest first)
     sorted_regions = sorted(region_coords.values(), key=len)
 
     def try_region(regions):
-        # Base case: all regions are processed
         if not regions:
-            yield []
-            return
+            return []
 
         # Take the smallest region and remaining regions
         smallest, *remaining = regions
@@ -137,23 +136,76 @@ def solve_n_queens(grid):
                 [
                     (x2, y2) for x2, y2 in region
                     if x2 != x and y2 != y
-                    and abs(x2 - x) > 1 or abs(y2 - y) > 1
+                    and (abs(x2 - x) > 1 or abs(y2 - y) > 1)
                 ]
                 for region in remaining
             ]
 
+            # If any region has no valid cells, skip this placement
             if any(len(region) == 0 for region in filtered):
                 continue
 
-            for solution in try_region(filtered):
-                yield [(x, y)] + solution
+            # Recurse on the remaining regions
+            solution = try_region(filtered)
+            if solution is not None:
+                return [(x, y)] + solution
+        return None
 
     # Generate all solutions
-    return list(try_region(sorted_regions))
+    return try_region(sorted_regions)
+
+# Place the queens on a board
+def display_solution(grid_size, solution):
+    output_grid = [['-' for _ in range(grid_size)] for _ in range(grid_size)]
+    for x, y in solution:
+        output_grid[y][x] = '👑'
+    for row in output_grid:
+        print(' '.join(row))
+
+solution = solve_queens(grid)
+
+def plot_colored_grid_with_queens(grid, grid_size, colors, queens):
+    # Define a color map based on the provided colors
+    color_map = {color["name"]: np.array(color["rgb"]) / 255 for color in colors}
+
+    # Initialize the figure and axes
+    fig, ax = plt.subplots(figsize=(8, 8))
+
+    # Plot each cell in the grid
+    for y in range(grid_size):
+        for x in range(grid_size):
+            color_name = grid[y][x]
+            color_rgb = color_map.get(color_name, [0, 0, 0])  # Default to black if color not found
+            rect = patches.Rectangle((x, grid_size - y - 1), 1, 1, facecolor=color_rgb, edgecolor="black")
+            ax.add_patch(rect)
+
+    # Overlay queens as red markers (you can use '👑' later with annotations if needed)
+    for x, y in queens:
+        ax.text(
+            x + 0.5, grid_size - y - 1 + 0.5,
+            "Q", fontsize=20, ha="center", va="center", color="red", weight="bold"
+        )
+
+    # Set axis limits, labels, and aspect ratio
+    ax.set_xlim(0, grid_size)
+    ax.set_ylim(0, grid_size)
+    ax.set_xticks(range(grid_size))
+    ax.set_yticks(range(grid_size))
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_aspect("equal")
+    ax.grid(True, which="both", color="black", linestyle="-", linewidth=0.5)
+
+    # Add title and show the plot
+    plt.title("Mapped Grid with Queens", fontsize=16)
+    plt.show()
 
 # Solve the N-Queens problem using this grid
-solutions = solve_n_queens(grid)
-print(f"Number of solutions: {len(solutions)}")
+if solution:
+    print("Solution found:")
+    display_solution(grid_size, solution)
+else:
+    print("No solution exists.")
 
-# Print the first solution
-print(solutions[0])
+# Generate the image with the queens
+plot_colored_grid_with_queens(grid, grid_size, colors, solution)
