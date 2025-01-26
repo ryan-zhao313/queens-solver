@@ -3,8 +3,9 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
+import matplotlib.patches as patches
 
-img = cv2.imread("test/254.PNG")
+img = cv2.imread("test/259.PNG")
 
 # handle error is no file found
 if img is None:
@@ -175,17 +176,41 @@ def solve_queens(grid):
     # Generate all solutions
     return try_region(sorted_regions)
 
-# Place the queens on a board
-def display_solution(grid_size, solution):
-    output_grid = [['-' for _ in range(grid_size)] for _ in range(grid_size)]
-    for x, y in solution:
-        output_grid[y][x] = '👑'
-    for row in output_grid:
-        print(' '.join(row))
-
 solution = solve_queens(grid)
+
+# Display the solution in Matplotlib
+def plot_colored_grid_with_queens(grid, grid_size, colors, queens):
+    color_map = {color["name"]: np.array(color["rgb"]) / 255 for color in colors}
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+
+    for y in range(grid_size):
+        for x in range(grid_size):
+            color_name = grid[y][x]
+            color_rgb = color_map.get(color_name, [0, 0, 0])
+            rect = patches.Rectangle((x, grid_size - y - 1), 1, 1, facecolor=color_rgb, edgecolor="black")
+            ax.add_patch(rect)
+
+    for x, y in queens:
+        ax.text(
+            x + 0.5, grid_size - y - 1 + 0.5,
+            "Q", fontsize=20, ha="center", va="center", color="red", weight="bold"
+        )
+
+    ax.set_xlim(0, grid_size)
+    ax.set_ylim(0, grid_size)
+    ax.set_xticks(range(grid_size))
+    ax.set_yticks(range(grid_size))
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_aspect("equal")
+    ax.grid(True, which="both", color="black", linestyle="-", linewidth=0.5)
+
+    plt.title("Queens Solution", fontsize=16)
+    plt.show()
+
+# Solve the N-Queens problem using this grid
 if solution:
-    print("Solution found:")
-    display_solution(grid_size, solution)
+    plot_colored_grid_with_queens(grid, grid_size, colors, solution)
 else:
     print("No solution exists.")
