@@ -1,4 +1,19 @@
 # Queens LinkedIn Game Solver
+This solves the LinkedIn Queens Game in Python. It uses OpenCV to detect the game grid and then solves it using optimized backtracking.
+
+## Getting Started
+Clone the repo and install all the Python libraries
+```pip install -r requirements.txt```
+
+## How It Works
+- Take a screenshot of the LInkedIn Queens board
+- Image is preprocessed
+- Hough Lines Transform is preformed to detect the lines in the grid
+- Cluster and merge the lines to find the size of the game board
+- Map all the colors in the grid
+- Partition the grid by color regions
+- Backtracking algorithm to place the Queens on each available cell
+- Output first solution found
 
 ## Testing Code
 ![Edge Detection](/img/edge-detection.PNG)
