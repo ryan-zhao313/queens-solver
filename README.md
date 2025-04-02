@@ -6,7 +6,7 @@ Clone the repo and install all the Python libraries
 ```pip install -r requirements.txt```
 
 ## How It Works
-- Take a screenshot of the LInkedIn Queens board
+- Take a screenshot of the LinkedIn Queens board
 - Image is preprocessed
 - Hough Lines Transform is preformed to detect the lines in the grid
 - Cluster and merge the lines to find the size of the game board
